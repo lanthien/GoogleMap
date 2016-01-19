@@ -13,6 +13,8 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageButton;
 
 import com.example.thienlan.mymap.Code.GPSTracker;
 import com.google.android.gms.common.api.Status;
@@ -25,12 +27,14 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.koushikdutta.ion.Ion;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     protected double longtitude, latitude;
@@ -38,24 +42,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationManager locationManager;
     String address, province, ward, city, country;
     PlaceAutocompleteFragment autocompleteFragment;
+    final String TAG = "PathGoogleMapActivity";
+    ImageButton ib;
+    LatLng dest, src;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
+        ib = (ImageButton) findViewById(R.id.imageButton);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+
+        gpsTracker = new GPSTracker(this);
         autocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager()
                 .findFragmentById(R.id.place_autocomplete_fragment);
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+
             @Override
             public void onPlaceSelected(Place place) {
                 mMap.clear();
                 latitude = place.getLatLng().latitude;
                 longtitude = place.getLatLng().longitude;
+                dest = new LatLng(latitude, longtitude);
                 AddMarker(place.getName().toString());
             }
 
@@ -65,16 +79,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER,
-                    3000,//update per 3s
-                    1,//update per 1m
-                    new MapsActivity()
-            );
-        }
+        ib.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MarkerOptions options = new MarkerOptions();
+                options.position(dest);
+                mMap.addMarker(options);
+                String url = getMapsApiDirectionsUrl();
+                ReadTask downloadTask = new ReadTask();
+                downloadTask.execute(url);
 
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(src,
+                        13));
+                mMap.addPolyline(new PolylineOptions().geodesic(true)
+                        .add(dest)  // Sydney
+                        .add(src)  // Fiji
+                );
+            }
+        });
     }
 
     /**
@@ -89,12 +111,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        gpsTracker = new GPSTracker(this);
+        src = new LatLng(gpsTracker.getLatitude(), gpsTracker.getLongitude());
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             /*Set Location button enable*/
             mMap.setMyLocationEnabled(true);
         }
+
+        // Polylines are useful for marking paths and routes on the map.
+
+
 
         mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
             @Override
@@ -112,27 +138,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return false;
             }
         });
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        latitude = location.getLatitude();
-        longtitude = location.getLongitude();
-        AddMarker("You are here");
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
 
     }
 
@@ -162,5 +167,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String getMapsApiDirectionsUrl() {
+//        String waypoints = "waypoints=optimize:true|"
+//                + LOWER_MANHATTAN.latitude + "," + LOWER_MANHATTAN.longitude
+//                + "|" + "|" + BROOKLYN_BRIDGE.latitude + ","
+//                + BROOKLYN_BRIDGE.longitude + "|" + WALL_STREET.latitude + ","
+//                + WALL_STREET.longitude;
+
+        String waypoints = "waypoints=optimize:true|"
+                + dest.latitude + "," + dest.longitude
+                + "|" + "|" + src.latitude + ","
+                + src.longitude;
+
+        String sensor = "sensor=false";
+        String params = waypoints + "&" + sensor;
+        String output = "json";
+        String url = "https://maps.googleapis.com/maps/api/directions/"
+                + output + "?" + params;
+        return url;
     }
 }
