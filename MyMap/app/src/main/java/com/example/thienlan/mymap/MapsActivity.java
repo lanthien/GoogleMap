@@ -3,11 +3,13 @@ package com.example.thienlan.mymap;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -17,26 +19,34 @@ import android.view.View;
 import android.widget.ImageButton;
 
 import com.example.thienlan.mymap.Code.GPSTracker;
+import com.example.thienlan.mymap.Code.HttpConnection;
+import com.example.thienlan.mymap.Code.PathJSONParser;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
 import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.LocationSource;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.gson.JsonObject;
 import com.koushikdutta.ion.Ion;
 
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback{
 
-    private GoogleMap mMap;
+    public GoogleMap mMap;
     protected double longtitude, latitude;
     GPSTracker gpsTracker = null;
     LocationManager locationManager;
@@ -45,6 +55,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     final String TAG = "PathGoogleMapActivity";
     ImageButton ib;
     LatLng dest, src;
+    JsonObject result;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,19 +93,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         ib.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MarkerOptions options = new MarkerOptions();
-                options.position(dest);
-                mMap.addMarker(options);
-                String url = getMapsApiDirectionsUrl();
-                ReadTask downloadTask = new ReadTask();
-                downloadTask.execute(url);
-
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(src,
-                        13));
-                mMap.addPolyline(new PolylineOptions().geodesic(true)
-                        .add(dest)  // Sydney
-                        .add(src)  // Fiji
-                );
+                LatLng src = new LatLng(gpsTracker.getLatitude(),gpsTracker.getLongitude());
+                LatLng dest= new LatLng(latitude,longtitude);
+                new DrawDirection(MapsActivity.this,mMap,src,dest).getJson();
             }
         });
     }
@@ -117,7 +118,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             /*Set Location button enable*/
             mMap.setMyLocationEnabled(true);
         }
-
         // Polylines are useful for marking paths and routes on the map.
 
 
@@ -184,8 +184,77 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         String sensor = "sensor=false";
         String params = waypoints + "&" + sensor;
         String output = "json";
-        String url = "https://maps.googleapis.com/maps/api/directions/"
+        String url = "https://maps.googleapis.com/maps/api/geocode/"
                 + output + "?" + params;
         return url;
+    }
+
+    private class ReadTask extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... url) {
+            String data = "";
+            try {
+                HttpConnection http = new HttpConnection();
+                data = http.readUrl(url[0]);
+            } catch (Exception e) {
+                Log.d("Background Task", e.toString());
+            }
+            return data;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            new ParserTask().execute(result);
+        }
+    }
+
+    private class ParserTask extends
+            AsyncTask<String, Integer, List<List<HashMap<String, String>>>> {
+
+        @Override
+        protected List<List<HashMap<String, String>>> doInBackground(
+                String... jsonData) {
+
+            JSONObject jObject;
+            List<List<HashMap<String, String>>> routes = null;
+
+            try {
+                jObject = new JSONObject(jsonData[0]);
+                PathJSONParser parser = new PathJSONParser();
+                routes = parser.parse(jObject);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return routes;
+        }
+
+        @Override
+        protected void onPostExecute(List<List<HashMap<String, String>>> routes) {
+            ArrayList<LatLng> points = null;
+            PolylineOptions polyLineOptions = null;
+
+            // traversing through routes
+            for (int i = 0; i < routes.size(); i++) {
+                points = new ArrayList<LatLng>();
+                polyLineOptions = new PolylineOptions();
+                List<HashMap<String, String>> path = routes.get(i);
+
+                for (int j = 0; j < path.size(); j++) {
+                    HashMap<String, String> point = path.get(j);
+
+                    double lat = Double.parseDouble(point.get("lat"));
+                    double lng = Double.parseDouble(point.get("lng"));
+                    LatLng position = new LatLng(lat, lng);
+
+                    points.add(position);
+                }
+
+                polyLineOptions.addAll(points);
+                polyLineOptions.width(2);
+                polyLineOptions.color(Color.BLUE);
+            }
+            mMap.addPolyline(polyLineOptions);
+        }
     }
 }
