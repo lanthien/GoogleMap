@@ -1,11 +1,9 @@
 package com.example.thienlan.mymap;
 
 import android.content.pm.PackageManager;
-import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.LocationManager;
-import android.os.AsyncTask;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
@@ -14,6 +12,7 @@ import android.view.View;
 import android.widget.ImageButton;
 
 import com.example.thienlan.mymap.Code.GPSTracker;
+import com.example.thienlan.mymap.Code.GetJson;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.places.Place;
 import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
@@ -24,14 +23,9 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.JsonObject;
 
-import org.json.JSONObject;
-
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
@@ -54,6 +48,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
 
         ib = (ImageButton) findViewById(R.id.imageButton);
+
+
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -86,7 +82,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 LatLng src = new LatLng(gpsTracker.getLatitude(),gpsTracker.getLongitude());
                 LatLng dest= new LatLng(latitude,longtitude);
-                new DrawDirection(MapsActivity.this,mMap,src,dest).getJson();
+                new GetJson(MapsActivity.this,dest,src,mMap).GetArray();
             }
         });
     }
