@@ -10,12 +10,12 @@ import java.util.List;
  */
 public class DecodePolyline {
 
-    public List<LatLng> Decode(String encoded) {
-        List<LatLng> poly = new ArrayList<LatLng>();
+    public static ArrayList<LatLng> Decode(String encoded) {
+        ArrayList<LatLng> poly = new ArrayList<LatLng>();
         int index = 0, len = encoded.length();
         int lat = 0, lng = 0;
 
-        while (index < len) {
+        while (index < len-1) {
             int b, shift = 0, result = 0;
             do {
                 b = encoded.charAt(index++) - 63;

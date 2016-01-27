@@ -53,6 +53,7 @@ public class GetJson {
                         JsonArray jsonArray = result.getAsJsonArray("routes")
                                                     .get(0).getAsJsonObject().getAsJsonArray("legs")
                                                     .get(0).getAsJsonObject().getAsJsonArray("steps");
+                        ArrayList<LatLng> x = new ArrayList<LatLng>();
                         for(int i=0;i<jsonArray.size();i++)
                         {
                             JsonObject jsonObject = jsonArray.get(i).getAsJsonObject()
@@ -62,6 +63,15 @@ public class GetJson {
                             lng = jsonObject.get("lng").getAsDouble();
                             patch.add(new LatLng(lat, lng));
 
+                            String polyline = jsonArray.get(i).getAsJsonObject()
+                                                                .getAsJsonObject("polyline")
+                                                                .get("points").getAsString();
+                            ArrayList<LatLng> polylineLatlng = DecodePolyline.Decode(polyline);
+                            for(int j=0;j<polylineLatlng.size();j++)
+                            {
+                                patch.add(new LatLng(polylineLatlng.get(j).latitude , polylineLatlng.get(j).longitude));
+                            }
+
                             jsonObject = jsonArray.get(i).getAsJsonObject()
                                                                     .getAsJsonObject("end_location")
                                                                     .getAsJsonObject();
@@ -70,8 +80,8 @@ public class GetJson {
                             Log.d("Test",lat+", "+lng);
                             patch.add(new LatLng(lat, lng));
                         }
-
-                        googleMap.addPolyline(new PolylineOptions().geodesic(true).color(Color.RED).width(3).addAll(patch));
+                        new DrawPath(patch,googleMap).execute();
+//                        googleMap.addPolyline(new PolylineOptions().color(Color.RED).width(5).addAll(patch).geodesic(true));
                         //new DrawPatch(patch).execute();
                     }
                 });
