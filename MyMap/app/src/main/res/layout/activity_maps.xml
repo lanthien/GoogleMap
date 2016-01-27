@@ -14,18 +14,26 @@
         <fragment
             android:id="@+id/place_autocomplete_fragment"
             android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment"
-            android:layout_width="wrap_content"
+            android:layout_width="250dp"
             android:layout_height="wrap_content"
             android:layout_gravity="top"/>
     </fragment>
 
     <ImageButton
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:id="@+id/imageButton"
         android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
-        android:background="@mipmap/direction"
-        />
+        android:background="@mipmap/direction"/>
+
+    <ImageButton
+        android:id="@+id/imageButton2"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_marginBottom="50dp"
+        android:background="@mipmap/load_location"/>
 
 </RelativeLayout>

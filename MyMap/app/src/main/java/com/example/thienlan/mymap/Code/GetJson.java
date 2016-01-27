@@ -50,12 +50,17 @@ public class GetJson {
                 .setCallback(new FutureCallback<JsonObject>() {
                     @Override
                     public void onCompleted(Exception e, JsonObject result) {
+                        //Get steps[] json array
                         JsonArray jsonArray = result.getAsJsonArray("routes")
                                                     .get(0).getAsJsonObject().getAsJsonArray("legs")
                                                     .get(0).getAsJsonObject().getAsJsonArray("steps");
+                        String time = result.getAsJsonArray("routes")
+                                .get(0).getAsJsonObject().getAsJsonArray("legs")
+                                .get(0).getAsJsonObject().getAsJsonObject("duration").get("text").getAsString();
                         ArrayList<LatLng> x = new ArrayList<LatLng>();
                         for(int i=0;i<jsonArray.size();i++)
                         {
+                            //get star_location gson object
                             JsonObject jsonObject = jsonArray.get(i).getAsJsonObject()
                                     .getAsJsonObject("start_location")
                                     .getAsJsonObject();
@@ -63,6 +68,7 @@ public class GetJson {
                             lng = jsonObject.get("lng").getAsDouble();
                             patch.add(new LatLng(lat, lng));
 
+                            //get polyline gson object
                             String polyline = jsonArray.get(i).getAsJsonObject()
                                                                 .getAsJsonObject("polyline")
                                                                 .get("points").getAsString();
@@ -72,17 +78,15 @@ public class GetJson {
                                 patch.add(new LatLng(polylineLatlng.get(j).latitude , polylineLatlng.get(j).longitude));
                             }
 
+                            //get end_location gson object
                             jsonObject = jsonArray.get(i).getAsJsonObject()
-                                                                    .getAsJsonObject("end_location")
-                                                                    .getAsJsonObject();
+                                    .getAsJsonObject("end_location")
+                                    .getAsJsonObject();
                             lat = jsonObject.get("lat").getAsDouble();
                             lng = jsonObject.get("lng").getAsDouble();
-                            Log.d("Test",lat+", "+lng);
                             patch.add(new LatLng(lat, lng));
                         }
-                        new DrawPath(patch,googleMap).execute();
-//                        googleMap.addPolyline(new PolylineOptions().color(Color.RED).width(5).addAll(patch).geodesic(true));
-                        //new DrawPatch(patch).execute();
+                        new DrawPath(patch,googleMap,time,context).execute();
                     }
                 });
     }
